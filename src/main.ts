@@ -4,9 +4,12 @@ import { fetchActiveCourses } from "./canvasApi";
 import { syncAssignments, backfillDueDates } from "./assignmentSync";
 import { renderTodoList } from "./todoRenderer";
 import { renderCalendar } from "./calendarRenderer";
+import { checkAndNotify } from "./notificationService";
 
 export default class CanvasSyncPlugin extends Plugin {
 	settings: CanvasSyncSettings = DEFAULT_SETTINGS;
+	private sentNotificationKeys: Set<string> = new Set();
+	private lastNotifyDate: string = "";
 
 	async onload() {
 		await this.loadSettings();
@@ -57,6 +60,28 @@ export default class CanvasSyncPlugin extends Plugin {
 				)
 			);
 		}
+
+		setTimeout(() => {
+			const today = new Date().toISOString().slice(0, 10);
+			if (this.lastNotifyDate !== today) {
+				this.sentNotificationKeys.clear();
+				this.lastNotifyDate = today;
+			}
+			checkAndNotify(this.app, this.settings, this.sentNotificationKeys);
+		}, 10000);
+
+		this.registerInterval(
+			window.setInterval(() => {
+				if (this.settings.notificationsEnabled) {
+					const today = new Date().toISOString().slice(0, 10);
+					if (this.lastNotifyDate !== today) {
+						this.sentNotificationKeys.clear();
+						this.lastNotifyDate = today;
+					}
+					checkAndNotify(this.app, this.settings, this.sentNotificationKeys);
+				}
+			}, 15 * 60 * 1000)
+		);
 	}
 
 	async loadSettings() {

@@ -14,6 +14,10 @@ vi.mock("../src/todoRenderer", () => ({
 	renderTodoList: vi.fn(),
 }));
 
+vi.mock("../src/notificationService", () => ({
+	checkAndNotify: vi.fn(),
+}));
+
 import { syncAssignments } from "../src/assignmentSync";
 import { renderTodoList } from "../src/todoRenderer";
 
@@ -150,17 +154,19 @@ describe("periodic sync", () => {
 
 		await plugin.onload();
 
-		expect(plugin.registerInterval).toHaveBeenCalledTimes(1);
+		// 1 for sync interval + 1 for notification interval
+		expect(plugin.registerInterval).toHaveBeenCalledTimes(2);
 	});
 
-	it("does not call registerInterval when syncIntervalMinutes is 0", async () => {
+	it("does not call registerInterval for sync when syncIntervalMinutes is 0", async () => {
 		(plugin.loadData as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
 			syncIntervalMinutes: 0,
 		});
 
 		await plugin.onload();
 
-		expect(plugin.registerInterval).not.toHaveBeenCalled();
+		// only the notification interval
+		expect(plugin.registerInterval).toHaveBeenCalledTimes(1);
 	});
 
 	it("calls syncAssignments on each interval tick", async () => {

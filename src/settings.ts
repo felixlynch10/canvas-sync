@@ -13,6 +13,9 @@ export interface CanvasSyncSettings {
 	courseMappings: Record<string, CourseMappingConfig>;
 	autoSyncOnStartup: boolean;
 	syncIntervalMinutes: number;
+	notificationsEnabled: boolean;
+	notifyEveningBefore: boolean;
+	notifyMorningOf: boolean;
 }
 
 export const DEFAULT_SETTINGS: CanvasSyncSettings = {
@@ -22,6 +25,9 @@ export const DEFAULT_SETTINGS: CanvasSyncSettings = {
 	courseMappings: {},
 	autoSyncOnStartup: false,
 	syncIntervalMinutes: 0,
+	notificationsEnabled: true,
+	notifyEveningBefore: true,
+	notifyMorningOf: true,
 };
 
 export class CanvasSyncSettingTab extends PluginSettingTab {
@@ -195,6 +201,45 @@ export class CanvasSyncSettingTab extends PluginSettingTab {
 						settings.syncIntervalMinutes = isNaN(parsed)
 							? 0
 							: Math.max(0, parsed);
+						await this.plugin.saveSettings();
+					})
+			);
+
+		// --- Notifications ---
+		containerEl.createEl("h3", { text: "Notifications" });
+
+		new Setting(containerEl)
+			.setName("Enable notifications")
+			.setDesc("Show macOS notifications for upcoming due dates")
+			.addToggle((toggle) =>
+				toggle
+					.setValue(settings.notificationsEnabled)
+					.onChange(async (value) => {
+						settings.notificationsEnabled = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Evening before")
+			.setDesc("Notify at 6 PM the evening before an assignment is due")
+			.addToggle((toggle) =>
+				toggle
+					.setValue(settings.notifyEveningBefore)
+					.onChange(async (value) => {
+						settings.notifyEveningBefore = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Morning of")
+			.setDesc("Notify at 8 AM the morning an assignment is due")
+			.addToggle((toggle) =>
+				toggle
+					.setValue(settings.notifyMorningOf)
+					.onChange(async (value) => {
+						settings.notifyMorningOf = value;
 						await this.plugin.saveSettings();
 					})
 			);
