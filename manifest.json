@@ -1,0 +1,9 @@
+{
+  "id": "canvas-sync",
+  "name": "Canvas Sync",
+  "version": "1.0.0",
+  "minAppVersion": "1.3.0",
+  "description": "Sync Canvas LMS assignments and render interactive todo lists",
+  "author": "Felix",
+  "isDesktopOnly": false
+}

@@ -1,0 +1,26 @@
+{
+  "name": "canvas-sync",
+  "version": "1.0.0",
+  "description": "Sync Canvas LMS assignments and render interactive todo lists",
+  "main": "main.js",
+  "scripts": {
+    "dev": "node esbuild.config.mjs",
+    "build": "node esbuild.config.mjs production",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "keywords": [],
+  "author": "Felix",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@vitest/coverage-v8": "^4.0.18",
+    "builtin-modules": "^3.3.0",
+    "esbuild": "^0.20.0",
+    "jsdom": "^28.0.0",
+    "obsidian": "latest",
+    "typescript": "^5.3.0",
+    "vitest": "^4.0.18"
+  }
+}
