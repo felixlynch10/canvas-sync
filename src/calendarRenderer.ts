@@ -9,7 +9,11 @@ interface CalendarItem {
 	subject: string;
 }
 
+type ViewMode = "month" | "week" | "day";
+
 const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+const MONTH_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 function getDaysInMonth(year: number, month: number): number {
 	return new Date(year, month + 1, 0).getDate();
@@ -23,6 +27,16 @@ function buildDateKey(year: number, month: number, day: number): string {
 	const m = String(month + 1).padStart(2, "0");
 	const d = String(day).padStart(2, "0");
 	return `${year}-${m}-${d}`;
+}
+
+function dateKeyFromDate(date: Date): string {
+	return buildDateKey(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function getSundayOfWeek(date: Date): Date {
+	const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+	d.setDate(d.getDate() - d.getDay());
+	return d;
 }
 
 function collectItems(
@@ -70,10 +84,13 @@ function renderMonth(
 	label: HTMLElement,
 	app: App,
 	itemsByDate: Map<string, CalendarItem[]>,
-	year: number,
-	month: number
+	currentDate: Date
 ): void {
 	grid.empty();
+
+	const year = currentDate.getFullYear();
+	const month = currentDate.getMonth();
+
 	label.textContent = new Date(year, month, 1).toLocaleDateString("en-US", {
 		month: "long",
 		year: "numeric",
@@ -151,6 +168,113 @@ function renderDayCell(
 	}
 }
 
+function renderWeek(
+	contentArea: HTMLElement,
+	label: HTMLElement,
+	app: App,
+	itemsByDate: Map<string, CalendarItem[]>,
+	anchorDate: Date
+): void {
+	contentArea.empty();
+
+	const sunday = getSundayOfWeek(anchorDate);
+	const saturday = new Date(sunday);
+	saturday.setDate(saturday.getDate() + 6);
+
+	// Format header: "Feb 9 – 15, 2026" or "Dec 29 – Jan 4, 2026" if spanning months
+	const sunMonth = MONTH_SHORT[sunday.getMonth()];
+	const satMonth = MONTH_SHORT[saturday.getMonth()];
+	if (sunday.getMonth() === saturday.getMonth()) {
+		label.textContent = `${sunMonth} ${sunday.getDate()} \u2013 ${saturday.getDate()}, ${saturday.getFullYear()}`;
+	} else {
+		label.textContent = `${sunMonth} ${sunday.getDate()} \u2013 ${satMonth} ${saturday.getDate()}, ${saturday.getFullYear()}`;
+	}
+
+	const now = new Date();
+	const todayKey = dateKeyFromDate(now);
+
+	const grid = contentArea.createDiv({ cls: "canvas-cal-week-grid" });
+
+	// Day labels row
+	for (const dayLabel of DAY_LABELS) {
+		grid.createDiv({ cls: "canvas-cal-day-label", text: dayLabel });
+	}
+
+	// One row of 7 tall cells
+	for (let i = 0; i < 7; i++) {
+		const cellDate = new Date(sunday);
+		cellDate.setDate(sunday.getDate() + i);
+		const key = dateKeyFromDate(cellDate);
+
+		const classes = ["canvas-cal-week-cell"];
+		if (key === todayKey) classes.push("today");
+
+		const cell = grid.createDiv({ cls: classes.join(" ") });
+		cell.createDiv({ cls: "canvas-cal-day-number", text: String(cellDate.getDate()) });
+
+		const items = itemsByDate.get(key) || [];
+		for (const item of items) {
+			const urgency = getUrgency(item.due);
+			let dotClass = "canvas-cal-dot-upcoming";
+			if (urgency === "overdue") dotClass = "canvas-cal-dot-overdue";
+			else if (urgency === "today") dotClass = "canvas-cal-dot-today";
+
+			const itemEl = cell.createDiv({ cls: `canvas-cal-week-item ${dotClass}` });
+			const nameEl = itemEl.createSpan({ cls: "canvas-cal-week-item-name", text: item.name });
+			nameEl.addEventListener("click", (e) => {
+				e.stopPropagation();
+				app.workspace.openLinkText(item.file.path, "");
+			});
+			itemEl.createSpan({ cls: "canvas-cal-week-item-subject", text: item.subject });
+		}
+	}
+}
+
+function renderDay(
+	contentArea: HTMLElement,
+	label: HTMLElement,
+	app: App,
+	itemsByDate: Map<string, CalendarItem[]>,
+	anchorDate: Date
+): void {
+	contentArea.empty();
+
+	// Format header: "Wednesday, February 12, 2026"
+	label.textContent = anchorDate.toLocaleDateString("en-US", {
+		weekday: "long",
+		year: "numeric",
+		month: "long",
+		day: "numeric",
+	});
+
+	const key = dateKeyFromDate(anchorDate);
+	const items = itemsByDate.get(key) || [];
+
+	const dayView = contentArea.createDiv({ cls: "canvas-cal-day-view" });
+
+	if (items.length === 0) {
+		dayView.createDiv({ cls: "canvas-cal-day-empty", text: "No assignments due" });
+		return;
+	}
+
+	for (const item of items) {
+		const urgency = getUrgency(item.due);
+		let dotColor = "canvas-cal-dot-upcoming";
+		if (urgency === "overdue") dotColor = "canvas-cal-dot-overdue";
+		else if (urgency === "today") dotColor = "canvas-cal-dot-today";
+
+		const row = dayView.createDiv({ cls: "canvas-cal-day-item" });
+		row.createDiv({ cls: `canvas-cal-day-item-dot ${dotColor}` });
+
+		const info = row.createDiv({ cls: "canvas-cal-day-item-info" });
+		const nameEl = info.createSpan({ cls: "canvas-cal-day-item-name", text: item.name });
+		nameEl.addEventListener("click", () => {
+			app.workspace.openLinkText(item.file.path, "");
+		});
+		info.createSpan({ cls: "canvas-cal-day-item-subject", text: item.subject });
+	}
+}
+
 export async function renderCalendar(
 	app: App,
 	settings: CanvasSyncSettings,
@@ -159,36 +283,76 @@ export async function renderCalendar(
 	const container = el.createDiv({ cls: "canvas-cal-container" });
 	const itemsByDate = collectItems(app, settings);
 
-	const now = new Date();
-	let currentYear = now.getFullYear();
-	let currentMonth = now.getMonth();
+	let currentDate = new Date();
+	let currentView: ViewMode = "month";
 
 	// Header
 	const header = container.createDiv({ cls: "canvas-cal-header" });
 
 	const prevBtn = header.createEl("button", { cls: "canvas-cal-nav", text: "\u2190" });
-	const monthLabel = header.createEl("span", { cls: "canvas-cal-month-label" });
+	const headerLabel = header.createEl("span", { cls: "canvas-cal-month-label" });
 	const nextBtn = header.createEl("button", { cls: "canvas-cal-nav", text: "\u2192" });
 
-	// Grid
-	const grid = container.createDiv({ cls: "canvas-cal-grid" });
+	// View mode toolbar
+	const toolbar = container.createDiv({ cls: "canvas-cal-view-toolbar" });
 
-	const refresh = () => renderMonth(grid, monthLabel, app, itemsByDate, currentYear, currentMonth);
+	const buttons: Record<ViewMode, HTMLButtonElement> = {} as Record<ViewMode, HTMLButtonElement>;
+	const modes: { mode: ViewMode; label: string }[] = [
+		{ mode: "day", label: "Day" },
+		{ mode: "week", label: "Week" },
+		{ mode: "month", label: "Month" },
+	];
+
+	for (const { mode, label } of modes) {
+		const btn = toolbar.createEl("button", {
+			cls: `canvas-cal-view-btn${mode === currentView ? " active" : ""}`,
+			text: label,
+		});
+		btn.addEventListener("click", () => {
+			if (currentView === mode) return;
+			currentView = mode;
+			for (const m of Object.keys(buttons) as ViewMode[]) {
+				buttons[m].removeClass("active");
+			}
+			btn.addClass("active");
+			refresh();
+		});
+		buttons[mode] = btn;
+	}
+
+	// Content area
+	const contentArea = container.createDiv({ cls: "canvas-cal-content" });
+
+	const refresh = () => {
+		if (currentView === "month") {
+			contentArea.empty();
+			const grid = contentArea.createDiv({ cls: "canvas-cal-grid" });
+			renderMonth(grid, headerLabel, app, itemsByDate, currentDate);
+		} else if (currentView === "week") {
+			renderWeek(contentArea, headerLabel, app, itemsByDate, currentDate);
+		} else {
+			renderDay(contentArea, headerLabel, app, itemsByDate, currentDate);
+		}
+	};
 
 	prevBtn.addEventListener("click", () => {
-		currentMonth--;
-		if (currentMonth < 0) {
-			currentMonth = 11;
-			currentYear--;
+		if (currentView === "month") {
+			currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
+		} else if (currentView === "week") {
+			currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() - 7);
+		} else {
+			currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() - 1);
 		}
 		refresh();
 	});
 
 	nextBtn.addEventListener("click", () => {
-		currentMonth++;
-		if (currentMonth > 11) {
-			currentMonth = 0;
-			currentYear++;
+		if (currentView === "month") {
+			currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
+		} else if (currentView === "week") {
+			currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() + 7);
+		} else {
+			currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() + 1);
 		}
 		refresh();
 	});
