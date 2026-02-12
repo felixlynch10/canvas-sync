@@ -30,6 +30,38 @@
   margin-bottom: 0;
 }
 
+/* ---- Collapsible sections ---- */
+details.canvas-todo-section {
+  margin-bottom: 16px;
+}
+
+details.canvas-todo-section:last-child {
+  margin-bottom: 0;
+}
+
+details.canvas-todo-section > summary {
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+}
+
+details.canvas-todo-section > summary::-webkit-details-marker {
+  display: none;
+}
+
+details.canvas-todo-section > summary::before {
+  content: "▶";
+  display: inline-block;
+  font-size: 0.65em;
+  margin-right: 6px;
+  transition: transform 0.15s ease;
+  vertical-align: middle;
+}
+
+details.canvas-todo-section[open] > summary::before {
+  transform: rotate(90deg);
+}
+
 /* ---- Section headers (shared) ---- */
 .canvas-todo-section-header {
   font-size: var(--font-ui-small);

@@ -130,15 +130,15 @@ describe("renderTodoList", () => {
 			// Verify section headers exist with correct classes
 			const overdueHeader = container.querySelector(".canvas-todo-overdue");
 			expect(overdueHeader).not.toBeNull();
-			expect(overdueHeader!.textContent).toBe("Overdue");
+			expect(overdueHeader!.textContent).toContain("Overdue");
 
 			const todayHeader = container.querySelector(".canvas-todo-today");
 			expect(todayHeader).not.toBeNull();
-			expect(todayHeader!.textContent).toBe("Due Today");
+			expect(todayHeader!.textContent).toContain("Due Today");
 
 			const laterHeader = container.querySelector(".canvas-todo-later");
 			expect(laterHeader).not.toBeNull();
-			expect(laterHeader!.textContent).toBe("Later");
+			expect(laterHeader!.textContent).toContain("Later");
 
 			// Verify no tomorrow/week/nodate sections since we have none of those
 			expect(container.querySelector(".canvas-todo-tomorrow")).toBeNull();
@@ -178,7 +178,7 @@ describe("renderTodoList", () => {
 
 			const headers = el.querySelectorAll(".canvas-todo-section-header");
 			const labels = Array.from(headers).map((h) => h.textContent);
-			expect(labels).toEqual(["Overdue", "Due Tomorrow", "This Week", "Later"]);
+			expect(labels).toEqual(["Overdue (1)", "Due Tomorrow (1)", "This Week (1)", "Later (1)"]);
 		});
 	});
 
@@ -201,7 +201,7 @@ describe("renderTodoList", () => {
 
 			const nodateHeader = el.querySelector(".canvas-todo-nodate");
 			expect(nodateHeader).not.toBeNull();
-			expect(nodateHeader!.textContent).toBe("No Due Date");
+			expect(nodateHeader!.textContent).toContain("No Due Date");
 		});
 
 		it("places 'No Due Date' section after all dated sections", async () => {
@@ -219,7 +219,7 @@ describe("renderTodoList", () => {
 
 			const headers = el.querySelectorAll(".canvas-todo-section-header");
 			const labels = Array.from(headers).map((h) => h.textContent);
-			expect(labels).toEqual(["Due Today", "No Due Date"]);
+			expect(labels).toEqual(["Due Today (1)", "No Due Date (1)"]);
 		});
 
 		it("does not render a due date span for items without due dates", async () => {
@@ -533,7 +533,7 @@ describe("renderTodoList", () => {
 			// "Due Today" section should come before "No Due Date"
 			const headers = el.querySelectorAll(".canvas-todo-section-header");
 			const labels = Array.from(headers).map((h) => h.textContent);
-			expect(labels.indexOf("Due Today")).toBeLessThan(labels.indexOf("No Due Date"));
+			expect(labels.indexOf("Due Today (1)")).toBeLessThan(labels.indexOf("No Due Date (1)"));
 		});
 	});
 });

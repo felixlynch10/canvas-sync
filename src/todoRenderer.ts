@@ -80,14 +80,15 @@ function renderItems(app: App, container: HTMLElement, items: TodoItem[], sortMo
 			const sectionItems = grouped[key];
 			if (!sectionItems || sectionItems.length === 0) continue;
 
-			const section = container.createDiv({ cls: "canvas-todo-section" });
-			section.createDiv({
+			const details = container.createEl("details", { cls: "canvas-todo-section" });
+			details.setAttribute("open", "");
+			const summary = details.createEl("summary", {
 				cls: `canvas-todo-section-header canvas-todo-${key === "none" ? "nodate" : key}`,
-				text: SECTION_LABELS[key],
+				text: `${SECTION_LABELS[key]} (${sectionItems.length})`,
 			});
 
 			for (const item of sectionItems) {
-				renderItem(app, section, item);
+				renderItem(app, details, item);
 			}
 		}
 	} else if (sortMode === "subject") {
@@ -100,14 +101,15 @@ function renderItems(app: App, container: HTMLElement, items: TodoItem[], sortMo
 		const subjects = Object.keys(grouped).sort((a, b) => a.localeCompare(b));
 
 		for (const subject of subjects) {
-			const section = container.createDiv({ cls: "canvas-todo-section" });
-			section.createDiv({
+			const details = container.createEl("details", { cls: "canvas-todo-section" });
+			details.setAttribute("open", "");
+			details.createEl("summary", {
 				cls: "canvas-todo-section-header canvas-todo-subject-group",
-				text: subject,
+				text: `${subject} (${grouped[subject].length})`,
 			});
 
 			for (const item of grouped[subject]) {
-				renderItem(app, section, item);
+				renderItem(app, details, item);
 			}
 		}
 	} else {
