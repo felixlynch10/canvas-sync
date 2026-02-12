@@ -1,8 +1,9 @@
 import { Plugin } from "obsidian";
 import { CanvasSyncSettings, DEFAULT_SETTINGS, CanvasSyncSettingTab } from "./settings";
 import { fetchActiveCourses } from "./canvasApi";
-import { syncAssignments } from "./assignmentSync";
+import { syncAssignments, backfillDueDates } from "./assignmentSync";
 import { renderTodoList } from "./todoRenderer";
+import { renderCalendar } from "./calendarRenderer";
 
 export default class CanvasSyncPlugin extends Plugin {
 	settings: CanvasSyncSettings = DEFAULT_SETTINGS;
@@ -14,10 +15,20 @@ export default class CanvasSyncPlugin extends Plugin {
 			renderTodoList(this.app, this.settings, el);
 		});
 
+		this.registerMarkdownCodeBlockProcessor("canvas-calendar", (source, el, ctx) => {
+			renderCalendar(this.app, this.settings, el);
+		});
+
 		this.addCommand({
 			id: "sync-canvas-assignments",
 			name: "Sync assignments from Canvas",
 			callback: () => syncAssignments(this.app, this.settings),
+		});
+
+		this.addCommand({
+			id: "backfill-due-dates",
+			name: "Backfill due dates from note body to frontmatter",
+			callback: () => backfillDueDates(this.app, this.settings),
 		});
 
 		this.addCommand({

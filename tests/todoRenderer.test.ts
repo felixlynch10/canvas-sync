@@ -13,6 +13,9 @@ if (!(String.prototype as any).contains) {
  * Polyfill these so the renderer can build its DOM tree in jsdom.
  */
 function addObsidianDomMethods(el: HTMLElement): HTMLElement {
+	(el as any).empty = function () {
+		while (this.firstChild) this.removeChild(this.firstChild);
+	};
 	(el as any).createDiv = function (opts?: any) {
 		const div = document.createElement("div");
 		if (opts?.cls) div.className = opts.cls;

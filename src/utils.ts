@@ -133,6 +133,14 @@ export function formatDate(iso: string): string {
 	});
 }
 
+export function formatDateShort(iso: string): string {
+	const date = new Date(iso);
+	return date.toLocaleDateString("en-US", {
+		month: "short",
+		day: "numeric",
+	});
+}
+
 export type Urgency = "overdue" | "today" | "tomorrow" | "week" | "later" | "none";
 
 export function getUrgency(due: string | null): Urgency {

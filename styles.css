@@ -162,3 +162,181 @@
   padding: 12px 10px;
   text-align: center;
 }
+
+/* ---- Sort toolbar ---- */
+.canvas-todo-toolbar {
+	display: flex;
+	gap: 6px;
+	padding-bottom: 10px;
+	margin-bottom: 12px;
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.canvas-todo-sort-btn {
+	font-size: var(--font-ui-small);
+	padding: 4px 12px;
+	border-radius: 14px;
+	border: 1px solid var(--background-modifier-border);
+	background: transparent;
+	color: var(--text-muted);
+	cursor: pointer;
+	transition: all 0.15s ease;
+	font-family: var(--font-ui-medium);
+}
+
+.canvas-todo-sort-btn:hover {
+	background: var(--background-secondary);
+	color: var(--text-normal);
+}
+
+.canvas-todo-sort-btn.active {
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+	border-color: var(--interactive-accent);
+}
+
+/* Subject group header (when sorting by subject) */
+.canvas-todo-section-header.canvas-todo-subject-group {
+	color: var(--text-normal);
+	background: var(--background-secondary);
+	border-left-color: var(--interactive-accent);
+}
+
+/* Overdue date styling */
+.canvas-todo-date-overdue {
+	color: var(--text-error) !important;
+}
+
+/* ============================================
+   Canvas Calendar Styles
+   ============================================ */
+
+.canvas-cal-container {
+	background: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+	padding: 16px;
+	font-family: var(--font-ui-medium);
+	color: var(--text-normal);
+}
+
+/* ---- Calendar header ---- */
+.canvas-cal-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 12px;
+}
+
+.canvas-cal-nav {
+	background: transparent;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 6px;
+	color: var(--text-muted);
+	cursor: pointer;
+	padding: 4px 10px;
+	font-size: 14px;
+	transition: all 0.15s ease;
+}
+
+.canvas-cal-nav:hover {
+	background: var(--background-secondary);
+	color: var(--text-normal);
+}
+
+.canvas-cal-month-label {
+	font-weight: 700;
+	font-size: 1.1em;
+}
+
+/* ---- Calendar grid ---- */
+.canvas-cal-grid {
+	display: grid;
+	grid-template-columns: repeat(7, 1fr);
+	gap: 2px;
+}
+
+.canvas-cal-day-label {
+	text-align: center;
+	font-size: var(--font-ui-small);
+	font-weight: 600;
+	color: var(--text-muted);
+	padding: 6px 0;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+}
+
+/* ---- Day cells ---- */
+.canvas-cal-day {
+	min-height: 60px;
+	padding: 4px;
+	border-radius: 4px;
+	border: 1px solid transparent;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.canvas-cal-day:hover {
+	background: var(--background-secondary);
+}
+
+.canvas-cal-day.outside {
+	opacity: 0.3;
+}
+
+.canvas-cal-day.today {
+	background: rgba(var(--color-blue-rgb, 47, 120, 197), 0.08);
+	border-color: var(--interactive-accent);
+}
+
+.canvas-cal-day-number {
+	font-size: var(--font-ui-small);
+	font-weight: 600;
+	color: var(--text-muted);
+	margin-bottom: 2px;
+}
+
+.canvas-cal-day.today .canvas-cal-day-number {
+	color: var(--interactive-accent);
+}
+
+/* ---- Assignment dots/pills ---- */
+.canvas-cal-dot {
+	font-size: 10px;
+	padding: 1px 5px;
+	border-radius: 3px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	cursor: pointer;
+	transition: opacity 0.15s ease;
+	line-height: 1.4;
+}
+
+.canvas-cal-dot:hover {
+	opacity: 0.8;
+}
+
+.canvas-cal-dot-overdue {
+	background: rgba(var(--color-red-rgb, 233, 49, 71), 0.2);
+	color: var(--text-error);
+}
+
+.canvas-cal-dot-today {
+	background: rgba(var(--color-orange-rgb, 217, 115, 13), 0.2);
+	color: rgb(var(--color-orange-rgb, 217, 115, 13));
+}
+
+.canvas-cal-dot-upcoming {
+	background: rgba(var(--color-blue-rgb, 47, 120, 197), 0.15);
+	color: var(--interactive-accent);
+}
+
+/* ---- Empty calendar state ---- */
+.canvas-cal-empty {
+	font-style: italic;
+	color: var(--text-muted);
+	text-align: center;
+	padding: 8px;
+}

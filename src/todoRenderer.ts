@@ -1,6 +1,6 @@
 import { App, TFile, Notice } from "obsidian";
 import { CanvasSyncSettings } from "./settings";
-import { getUrgency, formatDate } from "./utils";
+import { getUrgency, formatDateShort } from "./utils";
 
 interface TodoItem {
 	file: TFile;
@@ -21,13 +21,9 @@ const SECTION_LABELS: Record<string, string> = {
 
 const SECTION_ORDER = ["overdue", "today", "tomorrow", "week", "later", "none"];
 
-export async function renderTodoList(
-	app: App,
-	settings: CanvasSyncSettings,
-	el: HTMLElement
-): Promise<void> {
-	const container = el.createDiv({ cls: "canvas-todo-container" });
+type SortMode = "date" | "subject" | "name";
 
+function collectItems(app: App, settings: CanvasSyncSettings): TodoItem[] {
 	const allFiles = app.vault.getFiles();
 	const todoFiles = allFiles.filter(
 		(f) =>
@@ -61,32 +57,107 @@ export async function renderTodoList(
 		return a.due.localeCompare(b.due);
 	});
 
+	return items;
+}
+
+function renderItems(app: App, container: HTMLElement, items: TodoItem[], sortMode: SortMode): void {
+	container.empty();
+
 	if (items.length === 0) {
 		container.createDiv({ cls: "canvas-todo-empty", text: "No pending assignments" });
 		return;
 	}
 
-	const grouped: Record<string, TodoItem[]> = {};
-	for (const item of items) {
-		const key = item.urgency;
-		if (!grouped[key]) grouped[key] = [];
-		grouped[key].push(item);
-	}
+	if (sortMode === "date") {
+		const grouped: Record<string, TodoItem[]> = {};
+		for (const item of items) {
+			const key = item.urgency;
+			if (!grouped[key]) grouped[key] = [];
+			grouped[key].push(item);
+		}
 
-	for (const key of SECTION_ORDER) {
-		const sectionItems = grouped[key];
-		if (!sectionItems || sectionItems.length === 0) continue;
+		for (const key of SECTION_ORDER) {
+			const sectionItems = grouped[key];
+			if (!sectionItems || sectionItems.length === 0) continue;
 
-		const section = container.createDiv({ cls: "canvas-todo-section" });
-		section.createDiv({
-			cls: `canvas-todo-section-header canvas-todo-${key === "none" ? "nodate" : key}`,
-			text: SECTION_LABELS[key],
-		});
+			const section = container.createDiv({ cls: "canvas-todo-section" });
+			section.createDiv({
+				cls: `canvas-todo-section-header canvas-todo-${key === "none" ? "nodate" : key}`,
+				text: SECTION_LABELS[key],
+			});
 
-		for (const item of sectionItems) {
-			renderItem(app, section, item);
+			for (const item of sectionItems) {
+				renderItem(app, section, item);
+			}
+		}
+	} else if (sortMode === "subject") {
+		const grouped: Record<string, TodoItem[]> = {};
+		for (const item of items) {
+			if (!grouped[item.subject]) grouped[item.subject] = [];
+			grouped[item.subject].push(item);
+		}
+
+		const subjects = Object.keys(grouped).sort((a, b) => a.localeCompare(b));
+
+		for (const subject of subjects) {
+			const section = container.createDiv({ cls: "canvas-todo-section" });
+			section.createDiv({
+				cls: "canvas-todo-section-header canvas-todo-subject-group",
+				text: subject,
+			});
+
+			for (const item of grouped[subject]) {
+				renderItem(app, section, item);
+			}
+		}
+	} else {
+		const sorted = [...items].sort((a, b) => a.name.localeCompare(b.name));
+		for (const item of sorted) {
+			renderItem(app, container, item);
 		}
 	}
+}
+
+export async function renderTodoList(
+	app: App,
+	settings: CanvasSyncSettings,
+	el: HTMLElement
+): Promise<void> {
+	const container = el.createDiv({ cls: "canvas-todo-container" });
+
+	const items = collectItems(app, settings);
+
+	// Build toolbar
+	const toolbar = container.createDiv({ cls: "canvas-todo-toolbar" });
+	const itemsArea = container.createDiv({ cls: "canvas-todo-items" });
+
+	let currentSort: SortMode = "date";
+
+	const buttons: Record<SortMode, HTMLButtonElement> = {} as Record<SortMode, HTMLButtonElement>;
+	const modes: { mode: SortMode; label: string }[] = [
+		{ mode: "date", label: "Date" },
+		{ mode: "subject", label: "Subject" },
+		{ mode: "name", label: "Name" },
+	];
+
+	for (const { mode, label } of modes) {
+		const btn = toolbar.createEl("button", {
+			cls: `canvas-todo-sort-btn${mode === currentSort ? " active" : ""}`,
+			text: label,
+		});
+		btn.addEventListener("click", () => {
+			if (currentSort === mode) return;
+			currentSort = mode;
+			for (const m of Object.keys(buttons) as SortMode[]) {
+				buttons[m].removeClass("active");
+			}
+			btn.addClass("active");
+			renderItems(app, itemsArea, items, currentSort);
+		});
+		buttons[mode] = btn;
+	}
+
+	renderItems(app, itemsArea, items, currentSort);
 }
 
 function renderItem(app: App, parent: HTMLElement, item: TodoItem): void {
@@ -106,7 +177,10 @@ function renderItem(app: App, parent: HTMLElement, item: TodoItem): void {
 	const meta = info.createDiv({ cls: "canvas-todo-meta" });
 	meta.createSpan({ cls: "canvas-todo-subject", text: item.subject });
 	if (item.due) {
-		meta.createSpan({ cls: "canvas-todo-due", text: formatDate(item.due) });
+		const dueCls = item.urgency === "overdue"
+			? "canvas-todo-due canvas-todo-date-overdue"
+			: "canvas-todo-due";
+		meta.createSpan({ cls: dueCls, text: formatDateShort(item.due) });
 	}
 }
 

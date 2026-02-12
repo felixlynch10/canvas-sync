@@ -104,6 +104,57 @@ ${instructions}
 	await app.vault.create(filePath, content);
 }
 
+function parseDueFromBody(content: string): string | null {
+	const match = content.match(/\*\*Due:\*\*\s+(.+)/);
+	if (!match) return null;
+	const dateStr = match[1].trim();
+	if (dateStr === "No due date") return null;
+	// Strip " at HH:MM AM/PM" suffix if present
+	const cleaned = dateStr.replace(/\s+at\s+\d{1,2}:\d{2}\s*(AM|PM)/i, "");
+	const parsed = new Date(cleaned);
+	if (isNaN(parsed.getTime())) return null;
+	const yyyy = parsed.getFullYear();
+	const mm = String(parsed.getMonth() + 1).padStart(2, "0");
+	const dd = String(parsed.getDate()).padStart(2, "0");
+	return `${yyyy}-${mm}-${dd}`;
+}
+
+export async function backfillDueDates(
+	app: App,
+	settings: CanvasSyncSettings
+): Promise<void> {
+	const files = app.vault.getFiles().filter(
+		(f) =>
+			f.path.startsWith(settings.semesterBasePath) &&
+			(f.path.includes("/Todo/") || f.path.includes("/Working/")) &&
+			f.extension === "md"
+	);
+
+	let updated = 0;
+
+	for (const file of files) {
+		const cache = app.metadataCache.getFileCache(file);
+		if (cache?.frontmatter?.due) continue; // already has due date
+
+		const content = await app.vault.read(file);
+		const due = parseDueFromBody(content);
+		if (!due) continue;
+
+		// Insert due field after the tags block in frontmatter
+		const newContent = content.replace(/^(---\n[\s\S]*?)(---)/m, (match, front, closer) => {
+			// Add due before the closing ---
+			return front + `due: ${due}\n` + closer;
+		});
+
+		if (newContent !== content) {
+			await app.vault.modify(file, newContent);
+			updated++;
+		}
+	}
+
+	new Notice(`Backfill complete: added due dates to ${updated} notes`);
+}
+
 export async function syncAssignments(
 	app: App,
 	settings: CanvasSyncSettings
