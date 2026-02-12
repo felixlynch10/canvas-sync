@@ -1,6 +1,5 @@
 import { App, TFile } from "obsidian";
 import { CanvasSyncSettings } from "./settings";
-import { getUrgency } from "./utils";
 
 interface CalendarItem {
 	file: TFile;
@@ -14,6 +13,41 @@ type ViewMode = "month" | "week" | "day";
 const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 const MONTH_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/* ── Subject color palette (10 hues) ── */
+
+interface SubjectColor {
+	bg: string;
+	text: string;
+	border: string;
+}
+
+const SUBJECT_PALETTE: SubjectColor[] = [
+	{ bg: "rgba(230, 77, 77, 0.15)", text: "#c0392b", border: "#c0392b" },   // red
+	{ bg: "rgba(230, 126, 34, 0.15)", text: "#d35400", border: "#d35400" },   // orange
+	{ bg: "rgba(241, 196, 15, 0.15)", text: "#b7950b", border: "#f1c40f" },   // yellow
+	{ bg: "rgba(39, 174, 96, 0.15)", text: "#1e8449", border: "#27ae60" },    // green
+	{ bg: "rgba(22, 160, 133, 0.15)", text: "#117a65", border: "#16a085" },   // teal
+	{ bg: "rgba(41, 128, 185, 0.15)", text: "#1a5276", border: "#2980b9" },   // blue
+	{ bg: "rgba(142, 68, 173, 0.15)", text: "#6c3483", border: "#8e44ad" },   // purple
+	{ bg: "rgba(231, 76, 160, 0.15)", text: "#c2185b", border: "#e74ca0" },   // pink
+	{ bg: "rgba(52, 73, 94, 0.15)", text: "#2c3e50", border: "#34495e" },     // slate
+	{ bg: "rgba(127, 140, 141, 0.15)", text: "#566573", border: "#7f8c8d" },  // grey
+];
+
+function hashSubject(subject: string): number {
+	let h = 0;
+	for (let i = 0; i < subject.length; i++) {
+		h = ((h << 5) - h + subject.charCodeAt(i)) | 0;
+	}
+	return Math.abs(h) % SUBJECT_PALETTE.length;
+}
+
+function subjectColor(subject: string): SubjectColor {
+	return SUBJECT_PALETTE[hashSubject(subject)];
+}
+
+/* ── Date utilities ── */
 
 function getDaysInMonth(year: number, month: number): number {
 	return new Date(year, month + 1, 0).getDate();
@@ -38,6 +72,8 @@ function getSundayOfWeek(date: Date): Date {
 	d.setDate(d.getDate() - d.getDay());
 	return d;
 }
+
+/* ── Data collection ── */
 
 function collectItems(
 	app: App,
@@ -78,6 +114,37 @@ function collectItems(
 
 	return itemsByDate;
 }
+
+/* ── Inline-style helpers ── */
+
+function applyPillStyle(el: HTMLElement, color: SubjectColor): void {
+	el.style.background = color.bg;
+	el.style.color = color.text;
+	el.style.borderLeft = `3px solid ${color.border}`;
+}
+
+function applyBarStyle(el: HTMLElement, color: SubjectColor): void {
+	el.style.background = color.bg;
+	el.style.color = color.text;
+	el.style.borderLeft = `4px solid ${color.border}`;
+}
+
+/* ── Today-circle helper ── */
+
+function renderDayNumber(
+	parent: HTMLElement,
+	day: number,
+	isToday: boolean,
+	cls: string = "canvas-cal-day-number"
+): HTMLElement {
+	const numEl = parent.createDiv({ cls, text: String(day) });
+	if (isToday) {
+		numEl.addClass("canvas-cal-today-circle");
+	}
+	return numEl;
+}
+
+/* ── Month view ── */
 
 function renderMonth(
 	grid: HTMLElement,
@@ -147,26 +214,32 @@ function renderDayCell(
 	const items = itemsByDate.get(dateKey) || [];
 	const classes = ["canvas-cal-day"];
 	if (outside) classes.push("outside");
-	if (dateKey === todayKey) classes.push("today");
 	if (items.length > 0) classes.push("has-items");
 
 	const cell = grid.createDiv({ cls: classes.join(" ") });
-	cell.createDiv({ cls: "canvas-cal-day-number", text: String(day) });
+	const isToday = dateKey === todayKey;
+	renderDayNumber(cell, day, isToday);
 
-	for (const item of items) {
-		const urgency = getUrgency(item.due);
-		let dotClass = "canvas-cal-dot-upcoming";
-		if (urgency === "overdue") dotClass = "canvas-cal-dot-overdue";
-		else if (urgency === "today") dotClass = "canvas-cal-dot-today";
+	const MAX_VISIBLE = 2;
+	const visible = items.slice(0, MAX_VISIBLE);
+	const overflow = items.length - MAX_VISIBLE;
 
-		const truncated = item.name.length > 15 ? item.name.slice(0, 15) + "\u2026" : item.name;
-		const dot = cell.createDiv({ cls: `canvas-cal-dot ${dotClass}`, text: truncated });
-		dot.addEventListener("click", (e) => {
+	for (const item of visible) {
+		const color = subjectColor(item.subject);
+		const pill = cell.createDiv({ cls: "canvas-cal-pill", text: item.name });
+		applyPillStyle(pill, color);
+		pill.addEventListener("click", (e) => {
 			e.stopPropagation();
 			app.workspace.openLinkText(item.file.path, "");
 		});
 	}
+
+	if (overflow > 0) {
+		cell.createDiv({ cls: "canvas-cal-pill-overflow", text: `+${overflow} more` });
+	}
 }
+
+/* ── Week view ── */
 
 function renderWeek(
 	contentArea: HTMLElement,
@@ -181,7 +254,7 @@ function renderWeek(
 	const saturday = new Date(sunday);
 	saturday.setDate(saturday.getDate() + 6);
 
-	// Format header: "Feb 9 – 15, 2026" or "Dec 29 – Jan 4, 2026" if spanning months
+	// Format header
 	const sunMonth = MONTH_SHORT[sunday.getMonth()];
 	const satMonth = MONTH_SHORT[saturday.getMonth()];
 	if (sunday.getMonth() === saturday.getMonth()) {
@@ -195,9 +268,16 @@ function renderWeek(
 
 	const grid = contentArea.createDiv({ cls: "canvas-cal-week-grid" });
 
-	// Day labels row
-	for (const dayLabel of DAY_LABELS) {
-		grid.createDiv({ cls: "canvas-cal-day-label", text: dayLabel });
+	// Day header row (weekday + date number)
+	for (let i = 0; i < 7; i++) {
+		const cellDate = new Date(sunday);
+		cellDate.setDate(sunday.getDate() + i);
+		const key = dateKeyFromDate(cellDate);
+		const isToday = key === todayKey;
+
+		const headerCell = grid.createDiv({ cls: "canvas-cal-week-header" });
+		headerCell.createSpan({ cls: "canvas-cal-week-day-label", text: DAY_LABELS[i] });
+		renderDayNumber(headerCell, cellDate.getDate(), isToday, "canvas-cal-week-day-num");
 	}
 
 	// One row of 7 tall cells
@@ -206,29 +286,25 @@ function renderWeek(
 		cellDate.setDate(sunday.getDate() + i);
 		const key = dateKeyFromDate(cellDate);
 
-		const classes = ["canvas-cal-week-cell"];
-		if (key === todayKey) classes.push("today");
-
-		const cell = grid.createDiv({ cls: classes.join(" ") });
-		cell.createDiv({ cls: "canvas-cal-day-number", text: String(cellDate.getDate()) });
+		const cell = grid.createDiv({ cls: "canvas-cal-week-cell" });
 
 		const items = itemsByDate.get(key) || [];
 		for (const item of items) {
-			const urgency = getUrgency(item.due);
-			let dotClass = "canvas-cal-dot-upcoming";
-			if (urgency === "overdue") dotClass = "canvas-cal-dot-overdue";
-			else if (urgency === "today") dotClass = "canvas-cal-dot-today";
+			const color = subjectColor(item.subject);
+			const itemEl = cell.createDiv({ cls: "canvas-cal-week-pill" });
+			applyPillStyle(itemEl, color);
 
-			const itemEl = cell.createDiv({ cls: `canvas-cal-week-item ${dotClass}` });
-			const nameEl = itemEl.createSpan({ cls: "canvas-cal-week-item-name", text: item.name });
+			const nameEl = itemEl.createSpan({ cls: "canvas-cal-week-pill-name", text: item.name });
 			nameEl.addEventListener("click", (e) => {
 				e.stopPropagation();
 				app.workspace.openLinkText(item.file.path, "");
 			});
-			itemEl.createSpan({ cls: "canvas-cal-week-item-subject", text: item.subject });
+			itemEl.createSpan({ cls: "canvas-cal-week-pill-subject", text: item.subject });
 		}
 	}
 }
+
+/* ── Day view ── */
 
 function renderDay(
 	contentArea: HTMLElement,
@@ -239,7 +315,6 @@ function renderDay(
 ): void {
 	contentArea.empty();
 
-	// Format header: "Wednesday, February 12, 2026"
 	label.textContent = anchorDate.toLocaleDateString("en-US", {
 		weekday: "long",
 		year: "numeric",
@@ -258,22 +333,19 @@ function renderDay(
 	}
 
 	for (const item of items) {
-		const urgency = getUrgency(item.due);
-		let dotColor = "canvas-cal-dot-upcoming";
-		if (urgency === "overdue") dotColor = "canvas-cal-dot-overdue";
-		else if (urgency === "today") dotColor = "canvas-cal-dot-today";
+		const color = subjectColor(item.subject);
+		const row = dayView.createDiv({ cls: "canvas-cal-day-pill" });
+		applyBarStyle(row, color);
 
-		const row = dayView.createDiv({ cls: "canvas-cal-day-item" });
-		row.createDiv({ cls: `canvas-cal-day-item-dot ${dotColor}` });
-
-		const info = row.createDiv({ cls: "canvas-cal-day-item-info" });
-		const nameEl = info.createSpan({ cls: "canvas-cal-day-item-name", text: item.name });
+		const nameEl = row.createSpan({ cls: "canvas-cal-day-pill-name", text: item.name });
 		nameEl.addEventListener("click", () => {
 			app.workspace.openLinkText(item.file.path, "");
 		});
-		info.createSpan({ cls: "canvas-cal-day-item-subject", text: item.subject });
+		row.createSpan({ cls: "canvas-cal-day-pill-subject", text: item.subject });
 	}
 }
+
+/* ── Main render entry point ── */
 
 export async function renderCalendar(
 	app: App,
@@ -286,12 +358,20 @@ export async function renderCalendar(
 	let currentDate = new Date();
 	let currentView: ViewMode = "month";
 
-	// Header
+	// Header: [← →]  label  [Today]
 	const header = container.createDiv({ cls: "canvas-cal-header" });
 
-	const prevBtn = header.createEl("button", { cls: "canvas-cal-nav", text: "\u2190" });
+	const navGroup = header.createDiv({ cls: "canvas-cal-nav-group" });
+	const prevBtn = navGroup.createEl("button", { cls: "canvas-cal-nav", text: "\u2190" });
+	const nextBtn = navGroup.createEl("button", { cls: "canvas-cal-nav", text: "\u2192" });
+
 	const headerLabel = header.createEl("span", { cls: "canvas-cal-month-label" });
-	const nextBtn = header.createEl("button", { cls: "canvas-cal-nav", text: "\u2192" });
+
+	const todayBtn = header.createEl("button", { cls: "canvas-cal-today-btn", text: "Today" });
+	todayBtn.addEventListener("click", () => {
+		currentDate = new Date();
+		refresh();
+	});
 
 	// View mode toolbar
 	const toolbar = container.createDiv({ cls: "canvas-cal-view-toolbar" });
@@ -303,10 +383,10 @@ export async function renderCalendar(
 		{ mode: "month", label: "Month" },
 	];
 
-	for (const { mode, label } of modes) {
+	for (const { mode, label: modeLabel } of modes) {
 		const btn = toolbar.createEl("button", {
 			cls: `canvas-cal-view-btn${mode === currentView ? " active" : ""}`,
-			text: label,
+			text: modeLabel,
 		});
 		btn.addEventListener("click", () => {
 			if (currentView === mode) return;

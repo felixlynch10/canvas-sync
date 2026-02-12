@@ -240,7 +240,7 @@ details.canvas-todo-section[open] > summary::before {
 }
 
 /* ============================================
-   Canvas Calendar Styles
+   Canvas Calendar Styles — Apple Calendar
    ============================================ */
 
 .canvas-cal-container {
@@ -252,12 +252,18 @@ details.canvas-todo-section[open] > summary::before {
 	color: var(--text-normal);
 }
 
-/* ---- Calendar header ---- */
+/* ---- Calendar header (nav left, label center, today right) ---- */
 .canvas-cal-header {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
 	margin-bottom: 12px;
+}
+
+.canvas-cal-nav-group {
+	display: flex;
+	gap: 4px;
+	flex-shrink: 0;
 }
 
 .canvas-cal-nav {
@@ -279,6 +285,26 @@ details.canvas-todo-section[open] > summary::before {
 .canvas-cal-month-label {
 	font-weight: 700;
 	font-size: 1.1em;
+	text-align: center;
+	flex: 1;
+}
+
+.canvas-cal-today-btn {
+	font-size: var(--font-ui-small);
+	padding: 3px 12px;
+	border-radius: 14px;
+	border: 1px solid var(--background-modifier-border);
+	background: transparent;
+	color: var(--text-muted);
+	cursor: pointer;
+	transition: all 0.15s ease;
+	font-family: var(--font-ui-medium);
+	flex-shrink: 0;
+}
+
+.canvas-cal-today-btn:hover {
+	background: var(--background-secondary);
+	color: var(--text-normal);
 }
 
 /* ---- Calendar grid ---- */
@@ -317,9 +343,10 @@ details.canvas-todo-section[open] > summary::before {
 	opacity: 0.3;
 }
 
+/* Today cell — no blue background; red circle is the indicator */
 .canvas-cal-day.today {
-	background: rgba(var(--color-blue-rgb, 47, 120, 197), 0.08);
-	border-color: var(--interactive-accent);
+	background: transparent;
+	border-color: transparent;
 }
 
 .canvas-cal-day-number {
@@ -327,17 +354,30 @@ details.canvas-todo-section[open] > summary::before {
 	font-weight: 600;
 	color: var(--text-muted);
 	margin-bottom: 2px;
+	text-align: center;
 }
 
-.canvas-cal-day.today .canvas-cal-day-number {
-	color: var(--interactive-accent);
+/* ---- Red today circle ---- */
+.canvas-cal-today-circle {
+	background: #e93147;
+	color: white;
+	border-radius: 50%;
+	width: 24px;
+	height: 24px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 12px;
+	font-weight: 700;
+	line-height: 1;
 }
 
-/* ---- Assignment dots/pills ---- */
-.canvas-cal-dot {
+/* ---- Month pills (replace old dots) ---- */
+.canvas-cal-pill {
 	font-size: 10px;
-	padding: 1px 5px;
-	border-radius: 3px;
+	padding: 2px 6px;
+	border-radius: 4px;
+	border-left: 3px solid;
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -346,23 +386,21 @@ details.canvas-todo-section[open] > summary::before {
 	line-height: 1.4;
 }
 
-.canvas-cal-dot:hover {
+.canvas-cal-pill:hover {
 	opacity: 0.8;
 }
 
-.canvas-cal-dot-overdue {
-	background: rgba(var(--color-red-rgb, 233, 49, 71), 0.2);
-	color: var(--text-error);
+/* "+N more" overflow link */
+.canvas-cal-pill-overflow {
+	font-size: 10px;
+	color: var(--text-muted);
+	cursor: pointer;
+	padding: 1px 4px;
+	transition: color 0.15s ease;
 }
 
-.canvas-cal-dot-today {
-	background: rgba(var(--color-orange-rgb, 217, 115, 13), 0.2);
-	color: rgb(var(--color-orange-rgb, 217, 115, 13));
-}
-
-.canvas-cal-dot-upcoming {
-	background: rgba(var(--color-blue-rgb, 47, 120, 197), 0.15);
-	color: var(--interactive-accent);
+.canvas-cal-pill-overflow:hover {
+	color: var(--text-normal);
 }
 
 /* ---- Empty calendar state ---- */
@@ -412,11 +450,20 @@ details.canvas-todo-section[open] > summary::before {
 	gap: 2px;
 }
 
+.canvas-cal-week-header {
+	text-align: center;
+	font-size: var(--font-ui-small);
+	font-weight: 600;
+	color: var(--text-muted);
+	padding: 6px 0;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+}
+
 .canvas-cal-week-cell {
 	min-height: 120px;
 	padding: 8px;
 	border-radius: 4px;
-	border: 1px solid transparent;
 	display: flex;
 	flex-direction: column;
 	gap: 4px;
@@ -427,8 +474,7 @@ details.canvas-todo-section[open] > summary::before {
 }
 
 .canvas-cal-week-cell.today {
-	background: rgba(var(--color-blue-rgb, 47, 120, 197), 0.08);
-	border-color: var(--interactive-accent);
+	background: transparent;
 }
 
 .canvas-cal-week-cell .canvas-cal-day-number {
@@ -438,34 +484,31 @@ details.canvas-todo-section[open] > summary::before {
 	margin-bottom: 4px;
 }
 
-.canvas-cal-week-cell.today .canvas-cal-day-number {
-	color: var(--interactive-accent);
-}
-
-.canvas-cal-week-item {
-	display: flex;
-	flex-wrap: wrap;
-	align-items: center;
-	gap: 4px;
-	padding: 3px 6px;
-	border-radius: 4px;
+.canvas-cal-week-pill {
+	padding: 4px 8px;
+	border-radius: 6px;
+	border-left: 3px solid;
+	margin-bottom: 2px;
 	cursor: pointer;
-	transition: background 0.15s ease;
-	min-width: 0;
+	font-size: 11px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	transition: opacity 0.15s ease;
 }
 
-.canvas-cal-week-item:hover {
-	background: var(--background-modifier-border);
+.canvas-cal-week-pill:hover {
+	opacity: 0.8;
 }
 
-.canvas-cal-week-item-name {
+.canvas-cal-week-pill-name {
 	font-size: 11px;
 	color: var(--text-accent);
 	word-wrap: break-word;
 	overflow-wrap: break-word;
 }
 
-.canvas-cal-week-item-subject {
+.canvas-cal-week-pill-subject {
 	font-size: 9px;
 	background: var(--background-modifier-border);
 	padding: 0px 5px;
@@ -473,6 +516,7 @@ details.canvas-todo-section[open] > summary::before {
 	color: var(--text-muted);
 	white-space: nowrap;
 	flex-shrink: 0;
+	margin-left: 4px;
 }
 
 /* ---- Day view ---- */
@@ -482,66 +526,41 @@ details.canvas-todo-section[open] > summary::before {
 	gap: 0;
 }
 
-.canvas-cal-day-item {
+.canvas-cal-day-pill {
 	display: flex;
+	justify-content: space-between;
 	align-items: center;
-	gap: 10px;
-	padding: 10px;
-	border-bottom: 1px solid var(--background-modifier-border);
-	transition: background 0.15s ease;
+	padding: 10px 12px;
+	border-radius: 8px;
+	border-left: 4px solid;
+	margin-bottom: 6px;
+	cursor: pointer;
+	transition: opacity 0.15s ease;
 }
 
-.canvas-cal-day-item:last-child {
-	border-bottom: none;
+.canvas-cal-day-pill:hover {
+	opacity: 0.85;
 }
 
-.canvas-cal-day-item:hover {
-	background: var(--background-secondary);
-}
-
-.canvas-cal-day-item-dot {
-	width: 8px;
-	height: 8px;
-	border-radius: 50%;
-	flex-shrink: 0;
-}
-
-.canvas-cal-day-item-dot.overdue {
-	background: var(--text-error);
-}
-
-.canvas-cal-day-item-dot.today-dot {
-	background: rgb(var(--color-orange-rgb, 217, 115, 13));
-}
-
-.canvas-cal-day-item-dot.upcoming {
-	background: var(--interactive-accent);
-}
-
-.canvas-cal-day-item-info {
-	flex: 1;
-	min-width: 0;
-}
-
-.canvas-cal-day-item-name {
+.canvas-cal-day-pill-name {
 	color: var(--text-accent);
 	cursor: pointer;
 	transition: text-decoration 0.15s ease;
 }
 
-.canvas-cal-day-item-name:hover {
+.canvas-cal-day-pill-name:hover {
 	text-decoration: underline;
 }
 
-.canvas-cal-day-item-subject {
+.canvas-cal-day-pill-subject {
 	font-size: var(--font-ui-small);
 	background: var(--background-modifier-border);
 	padding: 1px 8px;
 	border-radius: 10px;
 	color: var(--text-muted);
 	white-space: nowrap;
-	margin-left: auto;
 	flex-shrink: 0;
+	margin-left: 8px;
 }
 
 .canvas-cal-day-empty {
