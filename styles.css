@@ -378,9 +378,8 @@ details.canvas-todo-section[open] > summary::before {
 	padding: 2px 6px;
 	border-radius: 4px;
 	border-left: 3px solid;
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
+	word-wrap: break-word;
+	overflow-wrap: break-word;
 	cursor: pointer;
 	transition: opacity 0.15s ease;
 	line-height: 1.4;
@@ -491,9 +490,8 @@ details.canvas-todo-section[open] > summary::before {
 	margin-bottom: 2px;
 	cursor: pointer;
 	font-size: 11px;
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
+	word-wrap: break-word;
+	overflow-wrap: break-word;
 	transition: opacity 0.15s ease;
 }
 
